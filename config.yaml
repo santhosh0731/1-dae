@@ -1,0 +1,223 @@
+# =============================================================================
+# Phase 3 DAE-PINN Framework — Master Configuration
+# =============================================================================
+
+project:
+  name: "DAE-PINN Boost Converter Surrogate"
+  phase: 3
+  version: "1.0.0"
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+paths:
+  raw_data: "C:/Users/sanmu/Downloads/ltspice_raw.csv.csv"
+  data_dir: "data"
+  results_dir: "results"
+  logs_dir: "logs"
+  models_dir: "results/models"
+  plots_dir: "results/plots"
+  benchmarks_dir: "results/benchmarks"
+
+# ---------------------------------------------------------------------------
+# LTspice Parser
+# ---------------------------------------------------------------------------
+parser:
+  encoding: "latin-1"
+  tab_separator: "\t"
+  step_header_prefix: "Step Information:"
+  columns:
+    - time
+    - V_n001      # Switching node (Vsw)
+    - V_n002      # Input node (Vin_node)
+    - V_n003      # Output / cap voltage (Vout)
+    - V_n004      # Gate signal
+    - I_L1        # Inductor current
+    - I_Rload     # Output current
+    - I_Vin       # Input current
+
+# Engineering unit multipliers (LTspice notation)
+unit_multipliers:
+  K: 1000.0
+  M: 1.0e6
+  G: 1.0e9
+  m: 1.0e-3
+  u: 1.0e-6
+  n: 1.0e-9
+  p: 1.0e-12
+  f: 1.0e-15
+
+# ---------------------------------------------------------------------------
+# Dataset Construction
+# ---------------------------------------------------------------------------
+dataset:
+  train_ratio: 0.70
+  val_ratio: 0.15
+  test_ratio: 0.15
+  random_seed: 42
+  waveform_resample_points: 512   # Uniform time grid for waveforms
+  scaler: "standard"              # "standard" or "minmax"
+
+# ---------------------------------------------------------------------------
+# Level 1 — Baseline Models
+# ---------------------------------------------------------------------------
+level1:
+  gpr:
+    kernel: "RBF"
+    n_restarts_optimizer: 5
+    alpha: 1.0e-6
+  svr:
+    kernel: "rbf"
+    C: 10.0
+    epsilon: 0.01
+    gamma: "scale"
+  xgboost:
+    n_estimators: 500
+    max_depth: 6
+    learning_rate: 0.05
+    subsample: 0.8
+    colsample_bytree: 0.8
+    random_state: 42
+  lightgbm:
+    n_estimators: 500
+    max_depth: 6
+    learning_rate: 0.05
+    num_leaves: 31
+    random_state: 42
+  catboost:
+    iterations: 500
+    depth: 6
+    learning_rate: 0.05
+    random_seed: 42
+    verbose: 0
+  mlp:
+    hidden_layer_sizes: [128, 256, 128, 64]
+    max_iter: 1000
+    random_state: 42
+
+# ---------------------------------------------------------------------------
+# Level 2 — Deep Learning
+# ---------------------------------------------------------------------------
+level2:
+  common:
+    epochs: 200
+    batch_size: 16
+    learning_rate: 1.0e-3
+    weight_decay: 1.0e-4
+    patience: 30          # Early stopping patience
+    device: "auto"        # auto detects cuda/cpu
+
+  cnn1d:
+    channels: [32, 64, 128]
+    kernel_size: 5
+    dropout: 0.2
+
+  tcn:
+    num_channels: [64, 64, 128, 128]
+    kernel_size: 3
+    dropout: 0.2
+
+  transformer:
+    d_model: 128
+    nhead: 8
+    num_encoder_layers: 4
+    dim_feedforward: 512
+    dropout: 0.1
+
+  autoencoder:
+    latent_dim: 32
+    encoder_dims: [256, 128, 64]
+    decoder_dims: [64, 128, 256]
+
+# ---------------------------------------------------------------------------
+# Level 3 — Operator Learning
+# ---------------------------------------------------------------------------
+level3:
+  common:
+    epochs: 300
+    batch_size: 16
+    learning_rate: 1.0e-3
+    device: "auto"
+
+  deeponet:
+    branch_layers: [6, 128, 256, 256, 128]   # input: 6 params
+    trunk_layers: [1, 128, 256, 256, 128]    # input: time
+    output_dim: 128
+    activation: "relu"
+
+  fno:
+    modes: 32                   # Fourier modes to keep
+    width: 64                   # Channel width
+    n_layers: 4
+    in_channels: 7              # input params + time
+    out_channels: 2             # Vout, IL
+
+# ---------------------------------------------------------------------------
+# Level 4 — Continuous-Time Models
+# ---------------------------------------------------------------------------
+level4:
+  common:
+    epochs: 200
+    batch_size: 8
+    learning_rate: 1.0e-3
+    device: "auto"
+    ode_solver: "dopri5"        # torchdiffeq solver
+
+  neural_ode:
+    hidden_dims: [128, 256, 256, 128]
+    state_dim: 2               # [IL, Vout]
+    input_dim: 6               # [Vin, D, Fs, L, C, Rload]
+
+  latent_neural_ode:
+    encoder_dims: [512, 256, 128]
+    latent_dim: 16
+    ode_dims: [128, 128]
+    decoder_dims: [128, 256, 512]
+
+  ode_rnn:
+    hidden_size: 128
+    n_layers: 2
+    latent_dim: 16
+
+# ---------------------------------------------------------------------------
+# Numerical Integration Layer (Stage 4)
+# ---------------------------------------------------------------------------
+integration:
+  methods:
+    - "RK4"
+    - "RK45"
+    - "Radau"
+    - "BDF"
+  dt_fixed: 1.0e-6             # For fixed-step methods
+  rtol: 1.0e-6
+  atol: 1.0e-8
+  preferred: "Radau"           # For stiff DAE systems
+
+# ---------------------------------------------------------------------------
+# Physics Parameters
+# ---------------------------------------------------------------------------
+physics:
+  L_default: 50.0e-6           # 50 µH
+  C_default: 47.0e-6           # 47 µF
+  Rload_default: 1.0           # 1 Ω
+
+  # Physics loss weights (for PINN stage)
+  lambda_data: 1.0
+  lambda_kvl: 0.1
+  lambda_kcl: 0.1
+  lambda_inductor: 0.1
+  lambda_capacitor: 0.1
+  lambda_energy: 0.05
+
+# ---------------------------------------------------------------------------
+# Evaluation Metrics
+# ---------------------------------------------------------------------------
+evaluation:
+  metrics:
+    - "MAE"
+    - "MSE"
+    - "RMSE"
+    - "R2"
+    - "MAPE"
+  plot_top_n: 5                # Top N predictions to plot
+  save_benchmark_csv: true

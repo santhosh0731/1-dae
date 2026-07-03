@@ -1,0 +1,70 @@
+# Phase 4 PINN — Central Configuration (Revised)
+# =====================================================================
+
+model:
+  input_dim: 7           # [t, Vin, D, Fs, L, C, Rload]
+  output_dim: 5          # [Vout, IL, Vc, dIL_dt, dVc_dt]
+  hidden_dims: [256, 256, 256, 128]
+  activation: tanh       # smooth for autograd physics derivatives
+  output_scaling: true   # scale outputs to physical ranges
+  dropout_rate: 0.05     # for MC uncertainty estimation
+
+training:
+  epochs: 150
+  lr: 1.0e-3
+  lr_min: 1.0e-6
+  batch_size: 512
+  patience: 30
+  optimizer: adam
+  lr_scheduler: cosine
+
+# 3-phase curriculum warm-start
+curriculum:
+  phase_a:               # Epochs 1-30: data only
+    end_epoch: 30
+    lambda_data: 1.0
+    lambda_kvl:  0.0
+    lambda_kcl:  0.0
+    lambda_dae:  0.0
+    lambda_bc:   0.1
+    lambda_ic:   0.1
+    lambda_pwr:  0.0
+  phase_b:               # Epochs 31-80: gentle physics
+    end_epoch: 80
+    lambda_data: 1.0
+    lambda_kvl:  0.5
+    lambda_kcl:  0.5
+    lambda_dae:  0.3
+    lambda_bc:   0.1
+    lambda_ic:   0.1
+    lambda_pwr:  0.0
+  phase_c:               # Epochs 81+: gradient-balanced adaptive
+    end_epoch: 150
+    use_adaptive: true   # switch to NTK gradient balancing
+    lambda_data: 1.0     # anchor weight (data always = 1.0)
+    ema_alpha: 0.9       # smoothing for adaptive weights
+
+# Boost converter physics (averaged model)
+physics:
+  model: averaged
+  # dIL/dt = (Vin - (1-D)*Vout) / L        [KVL / Inductor]
+  # dVc/dt = ((1-D)*IL - Vc/Rload) / C     [KCL / Capacitor]
+  # g(z): Vout = Vc                         [Algebraic]
+  dae_index: 1           # index-1 DAE
+
+# Dataset
+data:
+  phase3_physics_parquet: data/physics_dataset/physics_features.parquet
+  phase3_scalar_csv:      data/scalar_dataset/scalar_features.csv
+  output_dir:             phase4_pinn/datasets
+  train_split: 0.70
+  val_split:   0.15
+  test_split:  0.15
+  samples_per_step: 512
+
+paths:
+  checkpoints:  phase4_pinn/checkpoints
+  phase5_export: phase4_pinn/checkpoints/phase5_export
+  logs:         phase4_pinn/logs
+  reports:      phase4_pinn/reports
+  evaluation:   phase4_pinn/evaluation

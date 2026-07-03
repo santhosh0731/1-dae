@@ -1,0 +1,26 @@
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyTorch/Tensor checkpoints
+*.pt
+*.onnx
+dae_pinn_best.pt
+dae_pinn_final.pt
+pinn_best.pt
+
+# Log files and directories
+logs/
+*.log
+catboost_info/
+
+# Local configuration modifications
+.idea/
+.vscode/
+.env
+
+# Large dataset caches (ignore large local datasets if needed)
+data/processed/
+data/waveform_dataset/
+data/dynamic_dataset/

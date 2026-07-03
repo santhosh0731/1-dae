@@ -1,0 +1,17 @@
+{
+  "scalar": {
+    "model": "SVR",
+    "R2": 0.9897245523629354,
+    "level": "Level 1"
+  },
+  "waveform": {
+    "model": "Transformer",
+    "R2": 0.9959640573459736,
+    "level": "level2"
+  },
+  "dynamic": {
+    "model": "LatentNeuralODE",
+    "R2": 0.9064480009827977,
+    "level": "Level 4"
+  }
+}

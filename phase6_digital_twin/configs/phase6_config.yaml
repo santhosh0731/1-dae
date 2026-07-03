@@ -1,0 +1,12 @@
+# Phase 6 Digital Twin — central configuration
+# =====================================================================
+
+paths:
+  torchscript_model:    phase5_dae_pinn/deployment/dae_pinn_model.pt
+  scalers:              phase4_pinn/checkpoints/phase5_export/export_20260702_191714/normalization_scalers.pkl
+  reports:              phase6_digital_twin/reports
+  plots:                phase6_digital_twin/plots
+
+dashboard:
+  sim_steps: 100
+  dt: 5.0e-5 # Time step size (s)

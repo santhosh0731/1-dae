@@ -1,0 +1,70 @@
+# Phase 5 DAE-PINN — Central Configuration
+# =====================================================================
+
+model:
+  input_dim: 7           # [t, Vin, D, Fs, L, C, Rload]
+  output_dim: 5          # [Vout, IL, Vc, dIL_dt, dVc_dt]
+  hidden_dims: [256, 256, 256, 256, 128] # Deep 5-layer FC network
+  activation: tanh       # Smooth for autograd derivatives
+  output_scaling: true   # Custom scaling bounds
+  dropout_rate: 0.05
+
+irk:
+  method: Radau-IIA      # Selection: Radau-IIA, Gauss-Legendre, Lobatto
+  stages: 3              # Number of stages (order = 2s - 1 for Radau-IIA)
+  newton_tol: 1.0e-7     # Convergence tolerance for implicit system solver
+  max_iterations: 15     # Max Newton-Raphson iterations
+  step_size_h: 1.0e-5    # Target solver step size (s)
+
+training:
+  epochs: 80
+  lr: 1.0e-3
+  lr_min: 1.0e-6
+  batch_size: 2048
+  patience: 30
+  optimizer: adam
+  lr_scheduler: cosine
+
+# Loss weights (initial and curriculum settings)
+curriculum:
+  phase_a:               # Epochs 1-20: data only
+    end_epoch: 20
+    lambda_data: 1.0
+    lambda_kvl:  0.0
+    lambda_kcl:  0.0
+    lambda_dae:  0.0
+    lambda_irk:  0.0
+    lambda_bc:   0.1
+    lambda_ic:   0.1
+    lambda_pwr:  0.0
+  phase_b:               # Epochs 21-50: gentle physics + DAE
+    end_epoch: 50
+    lambda_data: 1.0
+    lambda_kvl:  0.5
+    lambda_kcl:  0.5
+    lambda_dae:  0.3
+    lambda_irk:  0.1      # Activate IRK integration error gently
+    lambda_bc:   0.1
+    lambda_ic:   0.1
+    lambda_pwr:  0.1
+  phase_c:               # Epochs 51+: full adaptive NTK balancing
+    end_epoch: 80
+    use_adaptive: true   # Dynamic weight updates
+    lambda_data: 1.0     # Reference weight anchor
+    ema_alpha: 0.9
+
+physics:
+  model: averaged
+  dae_index: 1
+
+data:
+  phase4_export_dir:     phase4_pinn/checkpoints/phase5_export
+  train_split: 0.70
+  val_split:   0.15
+  test_split:  0.15
+
+paths:
+  checkpoints:  phase5_dae_pinn/checkpoints
+  logs:         phase5_dae_pinn/logs
+  reports:      phase5_dae_pinn/reports
+  evaluation:   phase5_dae_pinn/evaluation

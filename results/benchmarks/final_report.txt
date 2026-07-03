@@ -1,0 +1,30 @@
+======================================================================
+  PHASE 3 — FINAL BENCHMARK REPORT
+======================================================================
+
+  BEST MODEL SELECTION
+  ----------------------------------------
+  [BEST] Best Scalar Surrogate: SVR  (R²=0.9897)  [Level 1]
+  [BEST] Best Waveform Surrogate: Transformer  (R²=0.9960)  [level2]
+  [BEST] Best Dynamic Surrogate: LatentNeuralODE  (R²=0.9064)  [Level 4]
+
+  FULL COMPARISON TABLE
+  ----------------------------------------
+ Level           Model  R2_primary      R2_key  RMSE_primary  Train_time_s  Inference_time_ms  N_params
+level2     Transformer    0.995964  overall_R2      0.063625   5099.903185           341.7819  884674.0
+level2             TCN    0.995019  overall_R2      0.070684    236.474347           173.1048  802402.0
+level2     Autoencoder    0.995005  overall_R2      0.070780     15.041326             1.1927 1344640.0
+level1             SVR    0.989725 Vout_avg_R2      0.102041      0.020397             1.6452       NaN
+level1     MLP_sklearn    0.968901 Vout_avg_R2      0.177521      0.271991             0.2872       NaN
+level1             GPR    0.965965 Vout_avg_R2      0.185711      0.827853            13.6599       NaN
+level1        CatBoost    0.944755 Vout_avg_R2      0.236603      8.987261            18.5449       NaN
+level4 LatentNeuralODE    0.906448  overall_R2     67.617457    268.351305                NaN   34354.0
+level2           CNN1D    0.902876  overall_R2      0.312116     61.158245            11.6706  308210.0
+level3        DeepONet    0.890079  overall_R2      0.332042    298.186695            49.0915  598274.0
+level3             FNO    0.853035  overall_R2      0.383936     60.362446            20.3628  550530.0
+level1         XGBoost    0.795132 Vout_avg_R2      0.455630      9.311780             7.5057       NaN
+level1        LightGBM    0.789884 Vout_avg_R2      0.461429      0.431437            13.9205       NaN
+level4       NeuralODE    0.415456  overall_R2    169.021028    297.495311                NaN  158658.0
+level4         ODE-RNN    0.013705  overall_R2    219.551155     87.526440                NaN  159170.0
+
+======================================================================

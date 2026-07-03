@@ -1,0 +1,10 @@
+Recommended Numerical Solver for Phase 5 Embedded IRK
+=======================================================
+
+Solver:    Radau-IIA
+Reason:    Best accuracy for stiff boost converter DAE
+Order:     3 (Radau-IIA 2-stage)
+Stability: A-stable, L-stable
+Reference: Hairer & Wanner, Solving ODEs II (1996)
+
+Phase 5 will embed this as a differentiable IRK layer.
