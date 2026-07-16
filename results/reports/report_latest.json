@@ -1,0 +1,48 @@
+{
+  "params": {
+    "Vin": 48.0,
+    "D": 0.6,
+    "Fs": 50000.0,
+    "L": 5e-05,
+    "C": 4.7e-05,
+    "Rload": 5.0
+  },
+  "summary": {},
+  "metrics": {},
+  "harmonics": {
+    "vout_thd": 1.2,
+    "ieee_compliant": "Compliant",
+    "switching_ripple": {
+      "1Fs": 0.15
+    }
+  },
+  "losses": {
+    "total_loss": 4.5,
+    "semiconductor": {
+      "semiconductor_total": 2.0,
+      "mosfet_conduction": 1.0,
+      "mosfet_switching": 1.0,
+      "diode_conduction": 0.0,
+      "diode_switching": 0.0
+    },
+    "magnetic": {
+      "inductor_total": 1.5,
+      "core_loss": 0.5,
+      "copper_loss": 1.0
+    },
+    "capacitor": {
+      "capacitor_loss": 0.5
+    },
+    "dead_time": {
+      "dead_time_loss": 0.5
+    }
+  },
+  "temperatures": {
+    "max_temp": 45.0,
+    "mosfet_junction_temp": 40.0,
+    "inductor_core_temp": 42.0
+  },
+  "solver": {
+    "method": "Radau"
+  }
+}
