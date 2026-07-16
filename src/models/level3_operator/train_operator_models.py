@@ -376,6 +376,70 @@ def run_level3() -> Dict:
                MODELS_DIR / "fno.pt")
     plot_training_history(tl_f, vl_f, "FNO", save_path=str(PLOTS_DIR / "fno_history.png"))
 
+    # ── POD-DeepONet (Upgrade) ─────────────────────────────────────────────
+    logger.info("\n  [POD-DeepONet] Training...")
+    try:
+        from src.models.pod_deeponet.pod_deeponet_model import PODDeepONet
+        pod_onet = PODDeepONet(param_dim=n_params, pod_modes=32, n_signals=N_SIGNALS)
+        pod_onet.fit_pod(Y_train.numpy())
+        pod_onet = pod_onet.to(DEVICE)
+        
+        optimizer_pod = optim.AdamW(pod_onet.parameters(), lr=LR, weight_decay=1e-4)
+        criterion_pod = nn.MSELoss()
+        
+        t0_pod = time.time()
+        for epoch in range(1, 51):  # 50 epochs for fast feedback
+            pod_onet.train()
+            idx = torch.randperm(X_train.shape[0])
+            for start in range(0, X_train.shape[0], BATCH_SIZE):
+                end = min(start + BATCH_SIZE, X_train.shape[0])
+                xb = X_train[idx[start:end]].to(DEVICE)
+                yb = Y_train[idx[start:end]].to(DEVICE)
+                optimizer_pod.zero_grad()
+                pred = pod_onet(xb)
+                loss = criterion_pod(pred, yb)
+                loss.backward()
+                optimizer_pod.step()
+        train_time_pod = time.time() - t0_pod
+        
+        pod_onet.eval()
+        with torch.no_grad():
+            t0_inf = time.time()
+            Ypred_pod = pod_onet(X_test.to(DEVICE)).cpu().numpy()
+            inf_time_pod = (time.time() - t0_inf) * 1000 / len(X_test)
+            
+        metrics_pod = compute_waveform_metrics(Y_test.numpy(), Ypred_pod, signal_names=['Vout', 'IL'])
+        metrics_pod['train_time_s'] = train_time_pod
+        metrics_pod['inference_time_ms'] = inf_time_pod
+        metrics_pod['n_params'] = sum(p.numel() for p in pod_onet.parameters())
+        benchmark['POD-DeepONet'] = metrics_pod
+        torch.save({'model_state': pod_onet.state_dict(),
+                    'config': {'model': 'POD-DeepONet', 'n_params': n_params}},
+                   MODELS_DIR / "pod_deeponet.pt")
+    except Exception as e:
+        logger.error(f"POD-DeepONet training failed: {e}")
+
+    # ── GINO (Upgrade) ─────────────────────────────────────────────────────
+    logger.info("\n  [GINO] Training...")
+    try:
+        from src.models.gino.gino_model import GeometryInformedFNO
+        gino_model = GeometryInformedFNO(param_dim=n_params, T=T_len, modes=32, width=64, n_layers=4)
+        
+        with ModelTimer("GINO train") as t_train:
+            tl_g, vl_g = train_operator_model(gino_model, "GINO",
+                                               X_train, Y_train, T_train,
+                                               X_val,   Y_val,   T_val)
+            
+        metrics_g, Ypred_g = evaluate_operator(gino_model, "GINO", X_test, Y_test, T_test)
+        metrics_g['train_time_s'] = t_train.elapsed
+        metrics_g['n_params'] = sum(p.numel() for p in gino_model.parameters())
+        benchmark['GINO'] = metrics_g
+        torch.save({'model_state': gino_model.state_dict(),
+                    'config': {'model': 'GINO', 'n_params': n_params}},
+                   MODELS_DIR / "gino.pt")
+    except Exception as e:
+        logger.error(f"GINO training failed: {e}")
+
     # Waveform comparisons
     T_axis = np.linspace(0, 1, T_len)
     for name, Ypred in [("DeepONet", Ypred_d), ("FNO", Ypred_f)]:

@@ -4,28 +4,28 @@
 
   PREDICTION METRICS
   ----------------------------------------
-  Vout_MAE                           : 38.552078
-  Vout_RMSE                          : 45.520978
-  Vout_R2                            : 0.250296
-  IL_MAE                             : 162.280273
-  IL_RMSE                            : 196.393757
-  IL_R2                              : 0.358886
-  Vc_MAE                             : 38.149025
-  Vc_RMSE                            : 45.231628
-  Vc_R2                              : 0.259797
-  overall_R2                         : 0.289660
-  KVL_residual_norm                  : 35887600.000000
-  KCL_residual_norm                  : 1864819.250000
-  DAE_constraint_error               : 2.035132
-  Power_balance_RMSE                 : 3988.292236
-  Energy_conserv_err_%               : 29.766819
-  KVL_max                            : 44647624.000000
-  KCL_max                            : 5288346.000000
+  Vout_MAE                           : 114.366035
+  Vout_RMSE                          : 125.742350
+  Vout_R2                            : -4.720441
+  IL_MAE                             : 380.020996
+  IL_RMSE                            : 451.953503
+  IL_R2                              : -2.395214
+  Vc_MAE                             : 114.352257
+  Vc_RMSE                            : 125.723671
+  Vc_R2                              : -4.718742
+  overall_R2                         : -3.944799
+  KVL_residual_norm                  : 411.833679
+  KCL_residual_norm                  : 30.302513
+  DAE_constraint_error               : 0.032833
+  Power_balance_RMSE                 : 32.225948
+  Energy_conserv_err_%               : 99.226463
+  KVL_max                            : 499.777649
+  KCL_max                            : 39.605160
 
   COMPARISON vs PHASE 3 BEST
   ----------------------------------------
   Phase 3 Transformer R2  : 0.9960
   Phase 3 SVR R2          : 0.9897
-  Phase 4 PINN R2         : 0.2897
+  Phase 4 PINN R2         : -3.9448
 
   PINN advantage: physically consistent + generalizes better

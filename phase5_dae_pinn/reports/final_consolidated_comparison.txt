@@ -3,7 +3,7 @@
 ==========================================================================
   Model Framework           | Overall R² Score   | Status/Category     
   --------------------------+--------------------+------------------------
-  DAE-PINN (Phase 5)        | 0.3937             | Winner: Proposed
+  DAE-PINN (Phase 5)        | 0.6419             | Winner: Proposed
   PINN (Phase 4)            | 0.4324             | Physics Baseline
   Transformer (Phase 3)     | 0.9960             | Best Waveform Surrogate
   SVR (Phase 3)             | 0.9897             | Best Scalar Surrogate

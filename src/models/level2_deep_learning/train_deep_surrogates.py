@@ -376,15 +376,24 @@ def run_level2() -> Dict:
     n_params = X_train.shape[1]
     benchmark = {}
 
+    try:
+        from src.models.physics_mamba.mamba_model import PhysicsMambaSSM
+        mamba_model = PhysicsMambaSSM(param_dim=n_params, T=T, n_signals=N_SIGNALS)
+    except ImportError:
+        mamba_model = None
+
     model_configs = [
         ("CNN1D",       CNN1D(n_params=n_params, T=T, n_signals=N_SIGNALS)),
         ("TCN",         TCN(n_params=n_params, T=T, n_signals=N_SIGNALS)),
         ("Transformer", TransformerSurrogate(n_params=n_params, T=T, n_signals=N_SIGNALS)),
         ("Autoencoder", AutoencoderRegressor(n_params=n_params, T=T, n_signals=N_SIGNALS)),
     ]
+    if mamba_model is not None:
+        model_configs.append(("Physics-Mamba", mamba_model))
 
     for name, model in model_configs:
-        ckpt_path = MODELS_DIR / f"{name.lower()}.pt"
+        ckpt_name = name.lower().replace('-', '_')
+        ckpt_path = MODELS_DIR / f"{ckpt_name}.pt"
 
         # ── Skip if checkpoint already exists ──────────────────────────
         if ckpt_path.exists():
@@ -398,7 +407,6 @@ def run_level2() -> Dict:
             r2 = metrics.get('overall_R2', float('nan'))
             logger.info(f"    {name} | overall R2={r2:.4f} | [loaded from checkpoint]")
             continue
-        # ───────────────────────────────────────────────────────────────
 
         logger.info(f"\n  [{name}] Training...")
         n_params_model = sum(p.numel() for p in model.parameters())

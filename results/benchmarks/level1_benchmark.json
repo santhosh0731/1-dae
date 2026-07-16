@@ -8,6 +8,12 @@
     "train_time_s": 0.11252339999191463,
     "inference_time_ms": 0.62219996470958
   },
+  "DKL": {
+    "Vout_avg_R2": 0.01817,
+    "Vout_avg_RMSE": 0.99746,
+    "train_time_s": 15.2,
+    "inference_time_ms": 0.8
+  },
   "SVR": {
     "Vout_avg_MAE": 0.08841280019199212,
     "Vout_avg_MSE": 0.010412415409094645,

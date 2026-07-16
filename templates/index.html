@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAE-PINN Digital Twin Boost Converter</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: rgba(22, 30, 49, 0.65);
+            --panel-border: rgba(255, 255, 255, 0.08);
+            --accent-primary: #00f2fe; /* Neon Cyan */
+            --accent-secondary: #4facfe; /* Electric Blue */
+            --accent-tertiary: #f78166; /* Coral Orange */
+            --accent-glow: rgba(0, 242, 254, 0.2);
+            --text-main: #e6edf3;
+            --text-muted: #8b949e;
+            --text-bright: #ffffff;
+            --success: #3fb950;
+            --warning: #d29922;
+            --danger: #f85149;
+            --font-outfit: 'Outfit', sans-serif;
+            --font-inter: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(22, 30, 49, 0.5) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(79, 172, 254, 0.1) 0px, transparent 50%),
+                radial-gradient(at 50% 100%, rgba(0, 242, 254, 0.05) 0px, transparent 50%);
+            color: var(--text-main);
+            font-family: var(--font-inter);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+            background: rgba(11, 15, 25, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--panel-border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-title-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-glow {
+            width: 12px;
+            height: 12px;
+            background: var(--accent-primary);
+            border-radius: 50%;
+            box-shadow: 0 0 15px var(--accent-primary);
+            animation: pulse 2s infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.9); box-shadow: 0 0 10px var(--accent-primary); }
+            100% { transform: scale(1.1); box-shadow: 0 0 20px var(--accent-primary); }
+        }
+
+        header h1 {
+            font-family: var(--font-outfit);
+            font-weight: 700;
+            font-size: 24px;
+            background: linear-gradient(135deg, var(--text-bright), var(--accent-primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .header-status {
+            display: flex;
+            gap: 20px;
+            font-size: 13px;
+        }
+
+        .status-badge {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--panel-border);
+            padding: 6px 12px;
+            border-radius: 20px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--font-mono);
+        }
+
+        .status-badge .indicator {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--success);
+        }
+
+        main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            padding: 30px 40px;
+            gap: 30px;
+            max-width: 1800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Glassmorphic Panel */
+        .glass-panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            backdrop-filter: blur(16px);
+            padding: 24px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .glass-panel:hover {
+            border-color: rgba(0, 242, 254, 0.15);
+            box-shadow: 0 8px 32px 0 rgba(0, 242, 254, 0.05);
+        }
+
+        .panel-title {
+            font-family: var(--font-outfit);
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-bright);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-pb: 12px;
+            padding-bottom: 12px;
+        }
+
+        /* Presets */
+        .presets-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .preset-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+        }
+
+        .preset-btn:hover {
+            background: rgba(0, 242, 254, 0.08);
+            border-color: var(--accent-primary);
+            color: var(--text-bright);
+            transform: translateY(-2px);
+        }
+
+        .preset-btn.active {
+            background: rgba(0, 242, 254, 0.15);
+            border-color: var(--accent-primary);
+            color: var(--text-bright);
+            box-shadow: 0 0 10px rgba(0, 242, 254, 0.1);
+        }
+
+        /* Parameter Slider */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .control-label .name {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .control-label .unit {
+            font-size: 11px;
+            font-family: var(--font-mono);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .slider-container input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent-primary);
+            box-shadow: 0 0 8px var(--accent-primary);
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 12px var(--accent-primary);
+        }
+
+        .slider-val-input {
+            width: 75px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            color: var(--text-bright);
+            font-family: var(--font-mono);
+            font-size: 13px;
+            padding: 6px 8px;
+            text-align: right;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .slider-val-input:focus {
+            border-color: var(--accent-primary);
+            background: rgba(0, 242, 254, 0.02);
+            box-shadow: 0 0 8px rgba(0, 242, 254, 0.15);
+        }
+
+        /* Right Dashboard Layout */
+        .dashboard-main {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        /* SVG Schematic */
+        .schematic-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(13, 17, 28, 0.5);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            position: relative;
+        }
+
+        .schematic-svg {
+            max-width: 100%;
+            height: 140px;
+        }
+
+        .schematic-svg .clickable-component {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .schematic-svg .clickable-component:hover {
+            filter: drop-shadow(0 0 8px var(--accent-primary));
+        }
+
+        .schematic-svg .clickable-component text {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            fill: var(--text-muted);
+            transition: fill 0.3s;
+        }
+
+        .schematic-svg .clickable-component:hover text {
+            fill: var(--accent-primary);
+            font-weight: bold;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent-secondary);
+        }
+
+        .stat-card.coral::before {
+            background: var(--accent-tertiary);
+        }
+
+        .stat-card.cyan::before {
+            background: var(--accent-primary);
+        }
+
+        .stat-card.green::before {
+            background: var(--success);
+        }
+
+        .stat-card .label {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .stat-card .value {
+            font-family: var(--font-outfit);
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--text-bright);
+        }
+
+        .stat-card .extra {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Plots Grid */
+        .plots-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            min-height: 380px;
+        }
+
+        .plot-panel {
+            background: rgba(13, 17, 28, 0.4);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 12px;
+            height: 380px;
+        }
+
+        /* Compliance HUD */
+        .hud-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .hud-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .hud-header {
+            font-family: var(--font-outfit);
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-bright);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .hud-formula {
+            font-family: var(--font-mono);
+            background: rgba(0, 0, 0, 0.25);
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #58a6ff;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            text-align: center;
+        }
+
+        .residual-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+
+        .residual-item .val {
+            font-family: var(--font-mono);
+            font-weight: 500;
+        }
+
+        .progress-bar-container {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-secondary), var(--accent-primary));
+            width: 0%;
+            transition: width 0.5s ease-out;
+        }
+
+        /* Bottom Row - Single Point Predictor */
+        .single-point-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .single-point-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .single-point-inputs {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .single-point-results {
+            display: flex;
+            gap: 15px;
+            flex: 3;
+            justify-content: space-between;
+        }
+
+        .point-result-card {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 8px;
+            padding: 10px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .point-result-card .lbl {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .point-result-card .val {
+            font-family: var(--font-mono);
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-bright);
+        }
+
+        /* UI Helpers */
+        .tooltip {
+            position: relative;
+            cursor: help;
+        }
+
+        .tooltip::after {
+            content: attr(data-tip);
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f242c;
+            border: 1px solid var(--panel-border);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            color: var(--text-main);
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s, visibility 0.2s;
+            z-index: 10;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        .tooltip:hover::after {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Loading indicator overlay */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(11, 15, 25, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+
+        .loading-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(0, 242, 254, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--accent-primary);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-title-container">
+            <div class="logo-glow"></div>
+            <h1>DAE-PINN Digital Twin Boost Converter</h1>
+        </div>
+        <div class="header-status">
+            <div class="status-badge">
+                <span class="indicator"></span>
+                <span>Physics-Informed NN</span>
+            </div>
+            <div class="status-badge">
+                <span>INDEX-1 DAE SOLVER</span>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- LEFT CONTROL PANEL -->
+        <section class="glass-panel" style="position: relative;">
+            <div class="loading-overlay" id="loader">
+                <div class="spinner"></div>
+            </div>
+
+            <div class="panel-title">
+                <span>Operation Control</span>
+                <span style="font-size: 11px; color: var(--accent-primary); font-family: var(--font-mono);">Twin Config</span>
+            </div>
+
+            <!-- Pre-sets -->
+            <div class="control-group">
+                <label class="control-label">
+                    <span class="name">Presets</span>
+                </label>
+                <div class="presets-grid">
+                    <button class="preset-btn active" onclick="loadPreset('standard')">Standard Step</button>
+                    <button class="preset-btn" onclick="loadPreset('high_freq')">High Freq Stiff</button>
+                    <button class="preset-btn" onclick="loadPreset('heavy_load')">Heavy Load</button>
+                    <button class="preset-btn" onclick="loadPreset('ripple')">High Ripple</button>
+                </div>
+            </div>
+
+            <!-- Sliders -->
+            <!-- Vin -->
+            <div class="control-group" id="ctrl-Vin">
+                <label class="control-label">
+                    <span class="name tooltip" data-tip="Input DC voltage to the converter.">Input Voltage (V<sub>in</sub>)</span>
+                    <span class="unit">Volts</span>
+                </label>
+                <div class="slider-container">
+                    <input type="range" id="slider-Vin" min="12.0" max="100.0" step="0.5" value="48.0" oninput="updateVal('Vin', this.value)">
+                    <input type="number" id="input-Vin" class="slider-val-input" min="12.0" max="100.0" step="0.5" value="48.0" onchange="updateVal('Vin', this.value)">
+                </div>
+            </div>
+
+            <!-- D -->
+            <div class="control-group" id="ctrl-D">
+                <label class="control-label">
+                    <span class="name tooltip" data-tip="MOSFET switch duty cycle ratio.">Duty Cycle (D)</span>
+                    <span class="unit">Ratio</span>
+                </label>
+                <div class="slider-container">
+                    <input type="range" id="slider-D" min="0.10" max="0.90" step="0.01" value="0.60" oninput="updateVal('D', this.value)">
+                    <input type="number" id="input-D" class="slider-val-input" min="0.10" max="0.90" step="0.01" value="0.60" onchange="updateVal('D', this.value)">
+                </div>
+            </div>
+
+            <!-- Fs -->
+            <div class="control-group" id="ctrl-Fs">
+                <label class="control-label">
+                    <span class="name tooltip" data-tip="Switching frequency of the MOSFET.">Switching Freq (F<sub>s</sub>)</span>
+                    <span class="unit">kHz</span>
+                </label>
+                <div class="slider-container">
+                    <input type="range" id="slider-Fs" min="10" max="150" step="1" value="50" oninput="updateVal('Fs', this.value)">
+                    <input type="number" id="input-Fs" class="slider-val-input" min="10" max="150" step="1" value="50" onchange="updateVal('Fs', this.value)">
+                </div>
+            </div>
+
+            <!-- L -->
+            <div class="control-group" id="ctrl-L">
+                <label class="control-label">
+                    <span class="name tooltip" data-tip="Inductance value.">Inductance (L)</span>
+                    <span class="unit">µH</span>
+                </label>
+                <div class="slider-container">
+                    <input type="range" id="slider-L" min="10" max="250" step="1" value="50" oninput="updateVal('L', this.value)">
+                    <input type="number" id="input-L" class="slider-val-input" min="10" max="250" step="1" value="50" onchange="updateVal('L', this.value)">
+                </div>
+            </div>
+
+            <!-- C -->
+            <div class="control-group" id="ctrl-C">
+                <label class="control-label">
+                    <span class="name tooltip" data-tip="Output smoothing capacitance value.">Capacitance (C)</span>
+                    <span class="unit">µF</span>
+                </label>
+                <div class="slider-container">
+                    <input type="range" id="slider-C" min="10" max="250" step="1" value="47" oninput="updateVal('C', this.value)">
+                    <input type="number" id="input-C" class="slider-val-input" min="10" max="250" step="1" value="47" onchange="updateVal('C', this.value)">
+                </div>
+            </div>
+
+            <!-- Rload -->
+            <div class="control-group" id="ctrl-Rload">
+                <label class="control-label">
+                    <span class="name tooltip" data-tip="Load resistance connected to the output.">Load Resistance (R<sub>load</sub>)</span>
+                    <span class="unit">Ω</span>
+                </label>
+                <div class="slider-container">
+                    <input type="range" id="slider-Rload" min="0.5" max="30.0" step="0.1" value="5.0" oninput="updateVal('Rload', this.value)">
+                    <input type="number" id="input-Rload" class="slider-val-input" min="0.5" max="30.0" step="0.1" value="5.0" onchange="updateVal('Rload', this.value)">
+                </div>
+            </div>
+
+            <!-- Simulation window -->
+            <div class="control-group">
+                <label class="control-label">
+                    <span class="name">Simulation Window</span>
+                    <span class="unit">ms</span>
+                </label>
+                <div class="slider-container">
+                    <input type="range" id="slider-tend" min="1" max="10" step="0.5" value="5" oninput="updateVal('tend', this.value)">
+                    <input type="number" id="input-tend" class="slider-val-input" min="1" max="10" step="0.5" value="5" onchange="updateVal('tend', this.value)">
+                </div>
+            </div>
+        </section>
+
+        <!-- MAIN DASHBOARD CONTENT -->
+        <section class="dashboard-main">
+            <!-- SVG Schematic and Live Value Stats -->
+            <div class="glass-panel" style="padding: 16px 24px;">
+                <div class="panel-title" style="margin-bottom: 12px; font-size: 15px;">
+                    <span>Interactive Circuit Schematic & State Observer</span>
+                    <span style="font-size: 11px; color: var(--text-muted);">Click components to jump to controls</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1.2fr 1.8fr; gap: 20px; align-items: center;">
+                    <!-- SVG Boost Schematic -->
+                    <div class="schematic-card">
+                        <svg class="schematic-svg" viewBox="0 0 500 220" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Input voltage source Vin -->
+                            <g class="clickable-component" onclick="focusComponent('Vin')" id="svg-Vin">
+                                <circle cx="50" cy="110" r="22" stroke="#58a6ff" stroke-width="2.5" fill="rgba(88, 166, 255, 0.15)" />
+                                <text x="50" y="114" text-anchor="middle" font-weight="bold" fill="#58a6ff">+</text>
+                                <text x="50" y="152" text-anchor="middle" font-size="10">Vin</text>
+                            </g>
+                            
+                            <!-- Inductor L -->
+                            <g class="clickable-component" onclick="focusComponent('L')" id="svg-L">
+                                <!-- Wave path representing inductor coil -->
+                                <path d="M 90,110 C 100,80 110,80 120,110 C 130,80 140,80 150,110 C 160,80 170,80 180,110" stroke="#f2ca30" stroke-width="3" fill="none" />
+                                <text x="135" y="75" text-anchor="middle">L</text>
+                            </g>
+
+                            <!-- Switch MOSFET D -->
+                            <g class="clickable-component" onclick="focusComponent('D')" id="svg-D">
+                                <line x1="210" y1="110" x2="210" y2="160" stroke="#a371f7" stroke-width="2.5" />
+                                <line x1="210" y1="110" x2="190" y2="140" stroke="#a371f7" stroke-width="3" />
+                                <text x="235" y="140" text-anchor="middle">Gate (D)</text>
+                            </g>
+
+                            <!-- Diode -->
+                            <g id="svg-diode">
+                                <path d="M 245,100 L 245,120 L 265,110 Z" fill="#8b949e" stroke="#8b949e" stroke-width="1.5" />
+                                <line x1="265" y1="100" x2="265" y2="120" stroke="#8b949e" stroke-width="2.5" />
+                            </g>
+
+                            <!-- Capacitor C -->
+                            <g class="clickable-component" onclick="focusComponent('C')" id="svg-C">
+                                <line x1="330" y1="100" x2="330" y2="120" stroke="#ff7b72" stroke-width="3" />
+                                <line x1="340" y1="100" x2="340" y2="120" stroke="#ff7b72" stroke-width="3" />
+                                <text x="335" y="75" text-anchor="middle">C</text>
+                            </g>
+
+                            <!-- Resistor Rload -->
+                            <g class="clickable-component" onclick="focusComponent('Rload')" id="svg-Rload">
+                                <path d="M 430,70 L 430,90 L 420,95 L 440,105 L 420,115 L 440,125 L 420,135 L 430,140 L 430,160" stroke="#79c0ff" stroke-width="2" fill="none" />
+                                <text x="465" y="115" text-anchor="middle">Rload</text>
+                            </g>
+
+                            <!-- Node Wires -->
+                            <path d="M 72,110 L 90,110 M 180,110 L 210,110 M 210,110 L 245,110 M 265,110 L 335,110 M 335,110 L 430,110 M 430,110 L 430,70" stroke="#30363d" stroke-width="2" fill="none" />
+                            <path d="M 50,132 L 50,180 L 430,180 L 430,160" stroke="#30363d" stroke-width="2" fill="none" />
+                            <path d="M 210,160 L 210,180 M 335,120 L 335,180 M 335,110 L 335,100" stroke="#30363d" stroke-width="2" fill="none" />
+                        </svg>
+                    </div>
+
+                    <!-- Live simulated transient metrics -->
+                    <div style="display: flex; flex-direction: column; gap: 12px; height: 100%; justify-content: space-around;">
+                        <div class="stats-grid" style="grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <div class="stat-card cyan">
+                                <span class="label">Steady State Vout (Theory)</span>
+                                <span class="value" id="val-vout-steady">0.00 V</span>
+                                <div class="extra">
+                                    <span>Formula: Vin/(1-D)</span>
+                                </div>
+                            </div>
+                            <div class="stat-card coral">
+                                <span class="label">Steady State IL (Theory)</span>
+                                <span class="value" id="val-il-steady">0.00 A</span>
+                                <div class="extra">
+                                    <span>Formula: Vo/((1-D)R)</span>
+                                </div>
+                            </div>
+                            <div class="stat-card green">
+                                <span class="label">Peak Simulated Vout</span>
+                                <span class="value" id="val-vout-peak">0.00 V</span>
+                                <div class="extra">
+                                    <span>Transient Max</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <span class="label">Energy Efficiency</span>
+                                <span class="value" id="val-efficiency">0.0 %</span>
+                                <div class="extra">
+                                    <span>P_out / P_in</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Plots Grid -->
+            <div class="plots-container">
+                <div class="plot-panel" id="plot-vout"></div>
+                <div class="plot-panel" id="plot-il"></div>
+            </div>
+
+            <!-- Compliance HUD and Differential equations Verification -->
+            <div class="hud-grid">
+                <!-- Differential Equation 1 -->
+                <div class="hud-card">
+                    <div class="hud-header">
+                        <span>KVL Inductor Loop Constraint Compliance</span>
+                        <span id="badge-kvl-status" style="font-size: 11px; font-family: var(--font-mono); color: var(--success);">Physics Validated</span>
+                    </div>
+                    <div class="hud-formula">
+                        dIL/dt = (Vin - (1 - D) * Vout) / L
+                    </div>
+                    <div class="residual-item">
+                        <span style="color: var(--text-muted);">Mean Absolute Residual:</span>
+                        <span class="val" id="val-kvl-residual">0.000e+00</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" id="bar-kvl"></div>
+                    </div>
+                </div>
+
+                <!-- Differential Equation 2 -->
+                <div class="hud-card">
+                    <div class="hud-header">
+                        <span>KCL Capacitor Node Constraint Compliance</span>
+                        <span id="badge-kcl-status" style="font-size: 11px; font-family: var(--font-mono); color: var(--success);">Physics Validated</span>
+                    </div>
+                    <div class="hud-formula">
+                        dVc/dt = ((1 - D) * IL - Vc / Rload) / C
+                    </div>
+                    <div class="residual-item">
+                        <span style="color: var(--text-muted);">Mean Absolute Residual:</span>
+                        <span class="val" id="val-kcl-residual">0.000e+00</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" id="bar-kcl"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SINGLE POINT PREDICTOR HUD -->
+            <div class="single-point-card">
+                <div class="hud-header" style="border-bottom: 1px solid rgba(255,255,255,0.04); padding-bottom: 8px;">
+                    <span>Single-Point Predictor HUD</span>
+                    <span style="font-size: 11px; color: var(--accent-primary); font-family: var(--font-mono);">Instantaneous Value Observer</span>
+                </div>
+                <div class="single-point-row">
+                    <div class="single-point-inputs">
+                        <label class="control-label" style="font-size: 12px; margin-right: 5px;">Time t:</label>
+                        <input type="number" id="input-point-t" class="slider-val-input" min="0.0" max="10.0" step="0.1" value="1.0" style="text-align: left; width: 90px;" onchange="calculatePointValues()">
+                        <span class="unit" style="font-size: 11px; font-family: var(--font-mono); background: rgba(255, 255, 255, 0.05); padding: 5px 8px; border-radius: 4px;">ms</span>
+                    </div>
+                    <div class="single-point-results">
+                        <div class="point-result-card">
+                            <span class="lbl">Output Voltage Vout(t)</span>
+                            <span class="val" id="val-point-vout">0.00 V</span>
+                        </div>
+                        <div class="point-result-card">
+                            <span class="lbl">Inductor Current IL(t)</span>
+                            <span class="val" id="val-point-il">0.00 A</span>
+                        </div>
+                        <div class="point-result-card">
+                            <span class="lbl">Capacitor Vc(t)</span>
+                            <span class="val" id="val-point-vc">0.00 V</span>
+                        </div>
+                        <div class="point-result-card">
+                            <span class="lbl">Algebraic Error (Vout-Vc)</span>
+                            <span class="val" id="val-point-alg" style="color: var(--success);">0.000 V</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Preset values definitions
+        const presets = {
+            standard: { Vin: 48.0, D: 0.60, Fs: 50.0, L: 50.0, C: 47.0, Rload: 5.0, tend: 5.0 },
+            high_freq: { Vin: 36.0, D: 0.50, Fs: 100.0, L: 100.0, C: 100.0, Rload: 10.0, tend: 3.0 },
+            heavy_load: { Vin: 48.0, D: 0.70, Fs: 30.0, L: 30.0, C: 22.0, Rload: 1.5, tend: 4.0 },
+            ripple: { Vin: 24.0, D: 0.65, Fs: 20.0, L: 15.0, C: 10.0, Rload: 20.0, tend: 8.0 }
+        };
+
+        // Cache parameters locally
+        const state = {
+            Vin: 48.0,
+            D: 0.60,
+            Fs: 50.0,
+            L: 50.0,
+            C: 47.0,
+            Rload: 5.0,
+            tend: 5.0,
+            simData: null
+        };
+
+        // Initialize Plotly plots
+        function initPlots() {
+            const voutLayout = {
+                title: { text: 'Transient Output Voltage V<sub>out</sub>(t)', font: { family: 'Outfit', color: '#e6edf3', size: 14 } },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                margin: { t: 40, b: 40, l: 50, r: 20 },
+                xaxis: { title: { text: 'Time [ms]', font: { color: '#8b949e', size: 11 } }, gridcolor: '#21262d', tickfont: { color: '#8b949e' } },
+                yaxis: { title: { text: 'Voltage [V]', font: { color: '#8b949e', size: 11 } }, gridcolor: '#21262d', tickfont: { color: '#8b949e' } }
+            };
+
+            const ilLayout = {
+                title: { text: 'Transient Inductor Current I<sub>L</sub>(t)', font: { family: 'Outfit', color: '#e6edf3', size: 14 } },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                margin: { t: 40, b: 40, l: 50, r: 20 },
+                xaxis: { title: { text: 'Time [ms]', font: { color: '#8b949e', size: 11 } }, gridcolor: '#21262d', tickfont: { color: '#8b949e' } },
+                yaxis: { title: { text: 'Current [A]', font: { color: '#8b949e', size: 11 } }, gridcolor: '#21262d', tickfont: { color: '#8b949e' } }
+            };
+
+            Plotly.newPlot('plot-vout', [{ x: [], y: [], type: 'scatter', mode: 'lines', line: { color: '#00f2fe', width: 2 } }], voutLayout, { responsive: true, displayModeBar: false });
+            Plotly.newPlot('plot-il', [{ x: [], y: [], type: 'scatter', mode: 'lines', line: { color: '#f78166', width: 2 } }], ilLayout, { responsive: true, displayModeBar: false });
+        }
+
+        // Apply a pre-set parameter config
+        function loadPreset(name) {
+            // Update active preset button style
+            document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            const preset = presets[name];
+            for (let key in preset) {
+                // Update internal values
+                state[key] = preset[key];
+                
+                // Update UI elements
+                const slider = document.getElementById(`slider-${key}`);
+                const input = document.getElementById(`input-${key}`);
+                if (slider) slider.value = preset[key];
+                if (input) input.value = preset[key];
+            }
+            
+            triggerSimulation();
+        }
+
+        // Update single parameter from slider or input box
+        function updateVal(key, val) {
+            // Remove active preset highlight
+            document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+
+            const num = parseFloat(val);
+            if (isNaN(num)) return;
+            
+            state[key] = num;
+
+            // Sync slider and input box
+            const slider = document.getElementById(`slider-${key}`);
+            const input = document.getElementById(`input-${key}`);
+            if (slider && slider.value != val) slider.value = val;
+            if (input && input.value != val) input.value = val;
+
+            // Throttle network calls slightly on slider drag
+            if (window.simTimeout) clearTimeout(window.simTimeout);
+            window.simTimeout = setTimeout(triggerSimulation, 100);
+        }
+
+        // SVG Jump-to-component visual focus helper
+        function focusComponent(key) {
+            // Flash components when clicked
+            const ctrl = document.getElementById(`ctrl-${key}`);
+            if (ctrl) {
+                ctrl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Highlight input border
+                const input = document.getElementById(`input-${key}`);
+                if (input) {
+                    input.focus();
+                    input.style.borderColor = 'var(--accent-primary)';
+                    setTimeout(() => input.style.borderColor = '', 1000);
+                }
+            }
+        }
+
+        // Main inference trigger
+        async function triggerSimulation() {
+            const loader = document.getElementById('loader');
+            loader.classList.add('active');
+
+            try {
+                // API Request payload: Convert L/C from micro-scale back to Henries/Farads
+                const payload = {
+                    Vin: state.Vin,
+                    D: state.D,
+                    Fs: state.Fs * 1000.0, // convert kHz to Hz
+                    L: state.L * 1e-6,     // convert uH to H
+                    C: state.C * 1e-6,     // convert uF to F
+                    Rload: state.Rload,
+                    t_end: state.tend * 1e-3, // convert ms to s
+                    steps: 200
+                };
+
+                const response = await fetch('/api/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error('API server returned error');
+                
+                const data = await response.json();
+                state.simData = data;
+
+                // 1. Update transient plots
+                const t_ms = data.t.map(v => v * 1000.0);
+                
+                Plotly.react('plot-vout', [{
+                    x: t_ms,
+                    y: data.Vout,
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: '#00f2fe', width: 2.5 },
+                    fill: 'tozeroy',
+                    fillcolor: 'rgba(0, 242, 254, 0.04)'
+                }], document.getElementById('plot-vout').layout);
+
+                Plotly.react('plot-il', [{
+                    x: t_ms,
+                    y: data.IL,
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: '#f78166', width: 2.5 },
+                    fill: 'tozeroy',
+                    fillcolor: 'rgba(247, 129, 102, 0.04)'
+                }], document.getElementById('plot-il').layout);
+
+                // 2. Update stats cards
+                document.getElementById('val-vout-steady').innerText = `${data.steady_state.Vout.toFixed(2)} V`;
+                document.getElementById('val-il-steady').innerText = `${data.steady_state.IL.toFixed(2)} A`;
+                
+                const maxVout = Math.max(...data.Vout);
+                document.getElementById('val-vout-peak').innerText = `${maxVout.toFixed(2)} V`;
+                document.getElementById('val-efficiency').innerText = `${data.power.efficiency.toFixed(1)} %`;
+
+                // 3. Update physics residuals HUD
+                const kvlRes = data.residuals.kvl_mean_abs;
+                const kclRes = data.residuals.kcl_mean_abs;
+                
+                document.getElementById('val-kvl-residual').innerText = kvlRes.toExponential(3);
+                document.getElementById('val-kcl-residual').innerText = kclRes.toExponential(3);
+
+                // KVL status assessment
+                const kvlBadge = document.getElementById('badge-kvl-status');
+                if (kvlRes < 5e3) {
+                    kvlBadge.innerText = 'Physics Validated';
+                    kvlBadge.style.color = 'var(--success)';
+                } else if (kvlRes < 1e5) {
+                    kvlBadge.innerText = 'Moderate Violation';
+                    kvlBadge.style.color = 'var(--warning)';
+                } else {
+                    kvlBadge.innerText = 'High Discrepancy';
+                    kvlBadge.style.color = 'var(--danger)';
+                }
+
+                // KCL status assessment
+                const kclBadge = document.getElementById('badge-kcl-status');
+                if (kclRes < 1e4) {
+                    kclBadge.innerText = 'Physics Validated';
+                    kclBadge.style.color = 'var(--success)';
+                } else if (kclRes < 5e5) {
+                    kclBadge.innerText = 'Moderate Violation';
+                    kclBadge.style.color = 'var(--warning)';
+                } else {
+                    kclBadge.innerText = 'High Discrepancy';
+                    kclBadge.style.color = 'var(--danger)';
+                }
+
+                // Set graphical residual bars (log-scaled representation for neatness)
+                // KVL bar logic
+                const kvlPct = Math.min(100, Math.max(5, (1.0 - Math.min(1.0, kvlRes / 1e5)) * 100));
+                document.getElementById('bar-kvl').style.width = `${kvlPct}%`;
+                
+                // KCL bar logic
+                const kclPct = Math.min(100, Math.max(5, (1.0 - Math.min(1.0, kclRes / 5e5)) * 100));
+                document.getElementById('bar-kcl').style.width = `${kclPct}%`;
+
+                // 4. Update single point HUD time bounds
+                const pointTInput = document.getElementById('input-point-t');
+                pointTInput.max = state.tend.toFixed(1);
+                if (parseFloat(pointTInput.value) > state.tend) {
+                    pointTInput.value = (state.tend / 2.0).toFixed(1);
+                }
+                calculatePointValues();
+
+            } catch (err) {
+                console.error(err);
+            } finally {
+                loader.classList.remove('active');
+            }
+        }
+
+        // Calculate values for a specific point in time
+        function calculatePointValues() {
+            if (!state.simData) return;
+            
+            const ptInput = document.getElementById('input-point-t');
+            let t_target = parseFloat(ptInput.value);
+            
+            if (isNaN(t_target)) t_target = 0.0;
+            if (t_target < 0) t_target = 0;
+            if (t_target > state.tend) t_target = state.tend;
+            ptInput.value = t_target.toFixed(2);
+
+            // Convert to matching seconds
+            const t_sec = t_target / 1000.0;
+
+            // Find closest index in simulation results
+            let closestIdx = 0;
+            let minDiff = Infinity;
+            for (let i = 0; i < state.simData.t.length; i++) {
+                const diff = Math.abs(state.simData.t[i] - t_sec);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closestIdx = i;
+                }
+            }
+
+            // Read predicted attributes
+            const voutVal = state.simData.Vout[closestIdx];
+            const ilVal = state.simData.IL[closestIdx];
+            const vcVal = state.simData.Vc[closestIdx];
+            const algError = Math.abs(state.simData.residuals.alg[closestIdx]);
+
+            document.getElementById('val-point-vout').innerText = `${voutVal.toFixed(2)} V`;
+            document.getElementById('val-point-il').innerText = `${ilVal.toFixed(2)} A`;
+            document.getElementById('val-point-vc').innerText = `${vcVal.toFixed(2)} V`;
+            
+            const algDisplayEl = document.getElementById('val-point-alg');
+            algDisplayEl.innerText = `${algError.toFixed(4)} V`;
+            if (algError < 0.05) {
+                algDisplayEl.style.color = 'var(--success)';
+            } else if (algError < 0.5) {
+                algDisplayEl.style.color = 'var(--warning)';
+            } else {
+                algDisplayEl.style.color = 'var(--danger)';
+            }
+        }
+
+        // Startup orchestration
+        window.addEventListener('DOMContentLoaded', () => {
+            initPlots();
+            triggerSimulation();
+        });
+    </script>
+</body>
+</html>

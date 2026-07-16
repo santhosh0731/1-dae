@@ -51,9 +51,22 @@ class DAEPINNTrainer:
         self.patience = train_cfg['patience']
         self.batch_size = train_cfg['batch_size']
 
-        self.optimizer = optim.Adam(model.parameters(), lr=train_cfg['lr'])
+        self.use_sam = config.get('training', {}).get('use_sam', False)
+        self.use_pcgrad = config.get('training', {}).get('use_pcgrad', False)
+
+        if self.use_sam:
+            from src.training.sam.sam_opt import SAM
+            self.optimizer = SAM(model.parameters(), optim.Adam, rho=0.05, lr=train_cfg['lr'])
+        else:
+            self.optimizer = optim.Adam(model.parameters(), lr=train_cfg['lr'])
+
+        if self.use_pcgrad:
+            from src.training.pcgrad.pcgrad_opt import PCGrad
+            base_opt = self.optimizer.base_optimizer if self.use_sam else self.optimizer
+            self.pcgrad_opt = PCGrad(base_opt)
+
         self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
-            self.optimizer,
+            self.optimizer.base_optimizer if self.use_sam else self.optimizer,
             T_max=self.epochs,
             eta_min=train_cfg['lr_min']
         )
@@ -151,7 +164,29 @@ class DAEPINNTrainer:
             Y_batch_phys = Y_batch[:, :3] * self.std_Y + self.mean_Y
 
             total, loss_dict = self.compute_loss(pred, Y_batch_phys, params_batch, X_batch, weights)
-            total.backward()
+            if self.use_pcgrad:
+                active_losses = []
+                for k, val in loss_dict.items():
+                    if k != 'total' and weights.get(k, 0.0) > 0:
+                        active_losses.append(weights[k] * val)
+                if len(active_losses) > 0:
+                    self.pcgrad_opt.pc_backward(active_losses)
+                    self.pcgrad_opt.step()
+                else:
+                    total.backward()
+                    self.optimizer.step()
+            elif self.use_sam:
+                total.backward()
+                self.optimizer.first_step(zero_grad=True)
+                
+                pred2 = self.model(X_batch)
+                total2, _ = self.compute_loss(pred2, Y_batch_phys, params_batch, X_batch, weights)
+                total2.backward()
+                self.optimizer.second_step(zero_grad=True)
+            else:
+                total.backward()
+                nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+                self.optimizer.step()
 
             # Stage 12: Monitor gradients and check for NaNs
             grad_norms = []
@@ -159,18 +194,13 @@ class DAEPINNTrainer:
                 if p.grad is not None:
                     grad_norms.append(p.grad.detach().data.norm(2).item())
             if grad_norms:
-                max_grad = max(grad_norms)
-                min_grad = min(grad_norms)
                 mean_grad = sum(grad_norms) / len(grad_norms)
             else:
-                max_grad, min_grad, mean_grad = 0.0, 0.0, 0.0
+                mean_grad = 0.0
 
             if np.isnan(total.item()) or (grad_norms and np.isnan(mean_grad)):
                 logger.error("  [FATAL] NaN detected in loss or gradients! Aborting training.")
                 sys.exit(1)
-
-            nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
-            self.optimizer.step()
 
             for k, v in loss_dict.items():
                 epoch_losses[k] += v.item()

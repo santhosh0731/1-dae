@@ -33,6 +33,44 @@ logger = logging.getLogger(__name__)
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Phase 6 Digital Twin Simulation Dashboard")
+    parser.add_argument('--vin', type=float, default=48.0, help='Input voltage (V) [default: 48.0]')
+    parser.add_argument('--d', type=float, default=0.6, help='Duty cycle (0.1-0.95) [default: 0.6]')
+    parser.add_argument('--fs', type=float, default=50000.0, help='Switching frequency (Hz) [default: 50000.0]')
+    parser.add_argument('--L', type=float, default=50e-6, help='Inductance (H) [default: 50 uH]')
+    parser.add_argument('--C', type=float, default=47e-6, help='Capacitance (F) [default: 47 uF]')
+    parser.add_argument('--rload', type=float, default=5.0, help='Load resistance (Ohm) [default: 5.0]')
+    parser.add_argument('-i', '--interactive', action='store_true', help='Prompt interactively for parameters')
+    args = parser.parse_args()
+
+    # Check for interactive prompt
+    if args.interactive:
+        print("\n=== DIGITAL TWIN INTERACTIVE CONFIGURATION ===")
+        try:
+            val = input("Enter Input Voltage (Vin, Volts) [default: 48.0]: ").strip()
+            vin = float(val) if val else 48.0
+
+            val = input("Enter Duty Cycle (D, 0.1 - 0.95) [default: 0.6]: ").strip()
+            d = float(val) if val else 0.6
+
+            val = input("Enter Switching Frequency (Fs, Hz) [default: 50000]: ").strip()
+            fs = float(val) if val else 50000.0
+
+            val = input("Enter Inductance (L, Henries) [default: 50e-6]: ").strip()
+            L = float(val) if val else 50e-6
+
+            val = input("Enter Capacitance (C, Farads) [default: 47e-6]: ").strip()
+            C = float(val) if val else 47e-6
+
+            val = input("Enter Load Resistance (Rload, Ohms) [default: 5.0]: ").strip()
+            rload = float(val) if val else 5.0
+        except ValueError:
+            print("[WARN] Invalid entry detected. Falling back to default values.")
+            vin, d, fs, L, C, rload = 48.0, 0.6, 50000.0, 50e-6, 47e-6, 5.0
+    else:
+        vin, d, fs, L, C, rload = args.vin, args.d, args.fs, args.L, args.C, args.rload
+
     logger.info("+" + "="*63 + "+")
     logger.info("|  PHASE 6 — DIGITAL TWIN & LLM ENGINEERING ASSISTANT          |")
     logger.info("|  Final Proposed Edge Deployment & User Dashboard             |")
@@ -44,14 +82,12 @@ def main():
         config = yaml.safe_load(f)
 
     # Initialize dashboard simulator
-    # Wait, lets check if the exported model and scalers exist from Phase 5
     model_path = Path(config['paths']['torchscript_model'])
     scalers_path = Path(config['paths']['scalers'])
 
     # Fallback to general export paths if not found
     if not model_path.exists():
         model_path = BASE_DIR.parent / "phase5_dae_pinn" / "checkpoints" / "dae_pinn_best.pt"
-        # If it's the pt checkpoint we save model_state, so we can convert/use the best model checkpoint directly
         logger.warning(f"TorchScript model not found at {model_path}. Trying fallback...")
         if not model_path.exists():
             logger.error("No trained models found! Please run Phase 5 first.")
@@ -59,7 +95,6 @@ def main():
 
     # Check scalers
     if not scalers_path.exists():
-        # search under phase4 export
         export_dir = BASE_DIR.parent / "phase4_pinn" / "checkpoints" / "phase5_export"
         subdirs = list(export_dir.glob("export_*"))
         if subdirs:
@@ -73,14 +108,14 @@ def main():
 
     dashboard = DigitalTwinDashboard(model_path, scalers_path, BASE_DIR / "plots")
 
-    # Run simulation for typical custom operating condition
+    # Run simulation for custom operating condition
     params = {
-        'Vin':   48.0,
-        'D':     0.6,
-        'Fs':    50000.0,
-        'L':     50e-6,
-        'C':     47e-6,
-        'Rload': 5.0
+        'Vin':   vin,
+        'D':     d,
+        'Fs':    fs,
+        'L':     L,
+        'C':     C,
+        'Rload': rload
     }
     logger.info(f"\n  Running Digital Twin transient simulation for: Vin={params['Vin']}V, D={params['D']}...")
     t, preds = dashboard.run_simulation(**params)
